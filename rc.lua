@@ -35,11 +35,11 @@ end)
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, font and wallpapers.
-beautiful.init(gears.filesystem.get_themes_dir() .. "default/theme.lua")
+beautiful.init("~/.config/awesome/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
-terminal = "xterm"
-editor = os.getenv("EDITOR") or "nano"
+terminal = "kitty"
+editor = "vim"
 editor_cmd = terminal .. " -e " .. editor
 
 -- Default modkey.
@@ -93,37 +93,22 @@ tag.connect_signal("request::default_layouts", function()
 end)
 -- }}}
 
--- {{{ Wallpaper
-screen.connect_signal("request::wallpaper", function(s)
-    awful.wallpaper {
-        screen = s,
-        widget = {
-            {
-                image     = beautiful.wallpaper,
-                upscale   = true,
-                downscale = true,
-                widget    = wibox.widget.imagebox,
-            },
-            valign = "center",
-            halign = "center",
-            tiled  = false,
-            widget = wibox.container.tile,
-        }
-    }
-end)
--- }}}
-
 -- {{{ Wibar
 
 -- Keyboard map indicator and switcher
 mykeyboardlayout = awful.widget.keyboardlayout()
 
 -- Create a textclock widget
-mytextclock = wibox.widget.textclock()
+--mytextclock = wibox.widget.textclock()
+mytextclock = wibox.widget {
+	format = '%a %b %d, %H:%M',
+	widget = wibox.widget.textclock
+}
 
 screen.connect_signal("request::desktop_decoration", function(s)
     -- Each screen has its own tag table.
-    awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
+    --awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
+    awful.tag({ "shell", "code", "web", "blah", "notes", "mail", "idle" }, s, awful.layout.layouts[1])
 
     -- Create a promptbox for each screen
     s.mypromptbox = awful.widget.prompt()
@@ -182,19 +167,22 @@ screen.connect_signal("request::desktop_decoration", function(s)
         screen   = s,
         widget   = {
             layout = wibox.layout.align.horizontal,
+						expand = "none",
             { -- Left widgets
                 layout = wibox.layout.fixed.horizontal,
-                mylauncher,
-                s.mytaglist,
+                --mylauncher,
+                --s.mytaglist,
                 s.mypromptbox,
             },
-            s.mytasklist, -- Middle widget
+            --s.mytasklist, -- Middle widget
+						s.mytaglist,
+            --mytextclock,
             { -- Right widgets
                 layout = wibox.layout.fixed.horizontal,
-                mykeyboardlayout,
+                --mykeyboardlayout,
+								mytextclock,
                 wibox.widget.systray(),
-                mytextclock,
-                s.mylayoutbox,
+                --s.mylayoutbox,
             },
         }
     }
@@ -233,8 +221,8 @@ awful.keyboard.append_global_keybindings({
               {description = "lua execute prompt", group = "awesome"}),
     awful.key({ modkey,           }, "Return", function () awful.spawn(terminal) end,
               {description = "open a terminal", group = "launcher"}),
-    awful.key({ modkey },            "r",     function () awful.screen.focused().mypromptbox:run() end,
-              {description = "run prompt", group = "launcher"}),
+    awful.key({ modkey }, "r", function () awful.util.spawn("rofi -theme purple -show drun") end,
+              {description = "run prompt", group = "launcher"}), 
     awful.key({ modkey }, "p", function() menubar.show() end,
               {description = "show the menubar", group = "launcher"}),
 })
@@ -263,14 +251,15 @@ awful.keyboard.append_global_keybindings({
         end,
         {description = "focus previous by index", group = "client"}
     ),
-    awful.key({ modkey,           }, "Tab",
-        function ()
-            awful.client.focus.history.previous()
-            if client.focus then
-                client.focus:raise()
-            end
-        end,
-        {description = "go back", group = "client"}),
+
+    awful.key({ modkey }, "Tab", function ()                                
+       os.execute([=[
+           rofi -theme purple -show windowcd -show-icons \
+           -kb-cancel "Super+Escape,Escape" \
+           -kb-accept-entry "!Super-Tab,!Super_L,!Super+Super_L,Return" \
+           -kb-row-down "Super+Tab,Super+Down" \
+           -kb-row-up "Super+ISO_Left_Tab,Super+Shift+Tab,Super+Up"]=]) end,
+              {description = "Alt tabbing", group = "tag"}),
     awful.key({ modkey, "Control" }, "j", function () awful.screen.focus_relative( 1) end,
               {description = "focus the next screen", group = "screen"}),
     awful.key({ modkey, "Control" }, "k", function () awful.screen.focus_relative(-1) end,
@@ -404,7 +393,7 @@ client.connect_signal("request::default_keybindings", function()
                 c:raise()
             end,
             {description = "toggle fullscreen", group = "client"}),
-        awful.key({ modkey, "Shift"   }, "c",      function (c) c:kill()                         end,
+        awful.key({ modkey, "modkey"   }, "c",      function (c) c:kill()                         end,
                 {description = "close", group = "client"}),
         awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ,
                 {description = "toggle floating", group = "client"}),
@@ -526,11 +515,6 @@ client.connect_signal("request::titlebars", function(c)
             layout  = wibox.layout.flex.horizontal
         },
         { -- Right
-            awful.titlebar.widget.floatingbutton (c),
-            awful.titlebar.widget.maximizedbutton(c),
-            awful.titlebar.widget.stickybutton   (c),
-            awful.titlebar.widget.ontopbutton    (c),
-            awful.titlebar.widget.closebutton    (c),
             layout = wibox.layout.fixed.horizontal()
         },
         layout = wibox.layout.align.horizontal
@@ -560,3 +544,28 @@ end)
 client.connect_signal("mouse::enter", function(c)
     c:activate { context = "mouse_enter", raise = false }
 end)
+
+-- {{{ SPECIAL rules
+awful.rules.rules = {
+     -- Remove firefox titlebar                                                  
+     { rule = { class = "firefox" },
+       properties = { titlebars_enabled = false  } },
+     -- Kitty Kittttys
+     { rule = { class = "kitty" },
+      properties = { titlebars_enabled = false } },
+     -- chromium
+     { rule = { class = "chromium" },
+      properties = { titlebars_enabled = false } },
+     -- Mindmaster window buggerino
+     { rule = { class = "MindMaster" },
+       properties = { opacity = 1, maximized = false, floating = false } },
+		-- Gimp
+     { rule = { class = "Gimp", role = "gimp-image-window" },
+       properties = { maximized = true } },
+}
+-- }}}
+
+-- {{{ Run ONCE
+awful.spawn.with_shell("~/.config/awesome/autorun.sh")
+-- }}}
+
