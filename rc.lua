@@ -98,11 +98,22 @@ end)
 -- Keyboard map indicator and switcher
 mykeyboardlayout = awful.widget.keyboardlayout()
 
+--local mytextclock = wibox.widget.textclock()
+
 -- Create a textclock widget
 --mytextclock = wibox.widget.textclock()
 mytextclock = wibox.widget {
-	format = '%a %b %d, %H:%M',
-	widget = wibox.widget.textclock
+	--format = '  %H:%M',
+    format = '    [ %a %b %d, %H:%M ]    ',
+	widget = wibox.widget.textclock,
+    visible = false
+}
+
+local myclock_t = awful.tooltip {
+    objects        = { mytextclock },
+    timer_function = function()
+        return os.date('Today is %A %B %d %Y\nThe time is %T')
+    end,
 }
 
 screen.connect_signal("request::desktop_decoration", function(s)
@@ -129,6 +140,10 @@ screen.connect_signal("request::desktop_decoration", function(s)
     s.mytaglist = awful.widget.taglist {
         screen  = s,
         filter  = awful.widget.taglist.filter.all,
+        -- layout to fix wierd bug with margin on top
+        -- layout   = {
+        --     layout  = wibox.layout.fixed.horizontal
+        -- },
         buttons = {
             awful.button({ }, 1, function(t) t:view_only() end),
             awful.button({ modkey }, 1, function(t)
@@ -170,24 +185,28 @@ screen.connect_signal("request::desktop_decoration", function(s)
 						expand = "none",
             { -- Left widgets
                 layout = wibox.layout.fixed.horizontal,
+                nil,
                 --mylauncher,
-                --s.mytaglist,
-                s.mypromptbox,
             },
-            --s.mytasklist, -- Middle widget
-						s.mytaglist,
-            --mytextclock,
+            { -- Middle widgets
+                layout = wibox.layout.fixed.horizontal,
+                s.mytaglist,
+                s.mypromptbox,
+                mytextclock,
+                wibox.widget.systray(),
+            },
             { -- Right widgets
                 layout = wibox.layout.fixed.horizontal,
                 --mykeyboardlayout,
-								mytextclock,
-                wibox.widget.systray(),
+				--mytextclock,
+                nil,
                 --s.mylayoutbox,
             },
         }
     }
 end)
 -- }}}
+
 
 -- {{{ Mouse bindings
 awful.mouse.append_global_mousebindings({
@@ -201,6 +220,24 @@ awful.mouse.append_global_mousebindings({
 
 -- General Awesome keys
 awful.keyboard.append_global_keybindings({
+    -- Rename tag
+    awful.key({ modkey, "Shift" }, "r", function () awful.prompt.run {
+        prompt       = "Rename tag: ",
+        textbox      = awful.screen.focused().mypromptbox.widget,
+        exe_callback = function(new_name)
+            if not new_name or #new_name == 0 then return end
+            local t = awful.screen.focused().selected_tag
+            if t then
+                t.name = new_name
+            end
+        end
+    } end,
+    {description = "rename tag", group = "tag"}),
+
+    -- Screenlocker
+    awful.key({ "Mod1", "Control"}, "l", function() awful.util.spawn("xlock -mode rain") end,
+              {description="xlock screen", group="awesome"}),
+
     awful.key({ modkey,           }, "s",      hotkeys_popup.show_help,
               {description="show help", group="awesome"}),
     awful.key({ modkey,           }, "w", function () mymainmenu:show() end,
@@ -222,7 +259,7 @@ awful.keyboard.append_global_keybindings({
     awful.key({ modkey,           }, "Return", function () awful.spawn(terminal) end,
               {description = "open a terminal", group = "launcher"}),
     awful.key({ modkey }, "r", function () awful.util.spawn("rofi -theme purple -show drun") end,
-              {description = "run prompt", group = "launcher"}), 
+              {description = "run prompt", group = "launcher"}),
     awful.key({ modkey }, "p", function() menubar.show() end,
               {description = "show the menubar", group = "launcher"}),
 })
@@ -252,14 +289,44 @@ awful.keyboard.append_global_keybindings({
         {description = "focus previous by index", group = "client"}
     ),
 
-    awful.key({ modkey }, "Tab", function ()                                
-       os.execute([=[
-           rofi -theme purple -show windowcd -show-icons \
-           -kb-cancel "Super+Escape,Escape" \
-           -kb-accept-entry "!Super-Tab,!Super_L,!Super+Super_L,Return" \
-           -kb-row-down "Super+Tab,Super+Down" \
-           -kb-row-up "Super+ISO_Left_Tab,Super+Shift+Tab,Super+Up"]=]) end,
-              {description = "Alt tabbing", group = "tag"}),
+    awful.key({ modkey }, "Tab",
+        function()
+            os.execute([=[
+                rofi -theme purple -show windowcd -show-icons \
+                    -kb-cancel "Super+Escape,Escape" \
+                    -kb-accept-entry "!Super-Tab,!Super_L,!Super+Super_L,Return" \
+                    -kb-row-down "Super+Tab,Super+Down" \
+                    -kb-row-up "Super+ISO_Left_Tab,Super+Shift+Tab,Super+Up"
+            ]=])
+        end,
+        { description = "Alt tabbing", group = "tag" }),
+    awful.key({ modkey, }, "#49",
+        function()
+            awful.client.focus.history.previous()
+            if client.focus then
+                awful.util.spawn([=[
+                    rofi -theme purple \
+                        -show window -modi run -show window \
+                        -font "Comic Code 12" \
+                ]=])
+            end
+        end,
+        { description = "Switch ALL windows", group = "client" }
+    ),
+
+    awful.key({ modkey, }, "#28",
+        function()
+        awful.util.spawn_with_shell([=[
+            rofi -theme solarized -disable-history -no-levenshtein-sort -modi run -show ssh \
+                -font "Comic Code 12" \
+                -no-parse-known-hosts \
+                -terminal "kitty --config /home/jn/.config/kitty/kitty-alt.conf" \
+                -ssh-command "{terminal} --detach ssh {host}"
+        ]=])
+        end,
+        { description = "SSh things", group = "client" }
+    ),
+
     awful.key({ modkey, "Control" }, "j", function () awful.screen.focus_relative( 1) end,
               {description = "focus the next screen", group = "screen"}),
     awful.key({ modkey, "Control" }, "k", function () awful.screen.focus_relative(-1) end,
@@ -273,6 +340,18 @@ awful.keyboard.append_global_keybindings({
                   end
               end,
               {description = "restore minimized", group = "client"}),
+
+
+    awful.key({ modkey }, "e", function() awful.screen.focused().systray.visible = not
+            awful.screen.focused().systray.visible
+    end,
+        { description = "Show systray", group = "screen" }),
+
+    awful.key({ modkey }, "e", function()
+        mytextclock.visible = not mytextclock.visible
+    end,
+        { description = "Show clock" }),
+
 })
 
 -- Layout related keybindings
@@ -475,7 +554,7 @@ ruled.client.connect_signal("request::rules", function()
     ruled.client.append_rule {
         id         = "titlebars",
         rule_any   = { type = { "normal", "dialog" } },
-        properties = { titlebars_enabled = true      }
+        properties = { titlebars_enabled = false      }
     }
 
     -- Set Firefox to always map on the tag named "2" on screen 1.
@@ -485,6 +564,28 @@ ruled.client.connect_signal("request::rules", function()
     -- }
 end)
 
+-- }}}
+
+-- {{{ SPECIAL rules
+awful.rules.rules = {
+    { rule = { instance = "kitty" },
+        properties = {},
+        callback = awful.titlebar.hide },
+    { rule = { instance = "kitty" },
+        properties = {},
+        callback = awful.titlebar.hide },
+
+
+        { rule = { class = "firefox" },
+        properties = { titlebars_enabled = false } },
+
+
+    { rule = { instance = "chromium" },
+        properties = {},
+        callback = awful.titlebar.hide },
+    { rule = { class = "Gimp", role = "gimp-image-window" },
+        properties = { maximized = true } },
+}
 -- }}}
 
 -- {{{ Titlebars
@@ -545,27 +646,12 @@ client.connect_signal("mouse::enter", function(c)
     c:activate { context = "mouse_enter", raise = false }
 end)
 
--- {{{ SPECIAL rules
-awful.rules.rules = {
-     -- Remove firefox titlebar                                                  
-     { rule = { class = "firefox" },
-       properties = { titlebars_enabled = false  } },
-     -- Kitty Kittttys
-     { rule = { class = "kitty" },
-      properties = { titlebars_enabled = false } },
-     -- chromium
-     { rule = { class = "chromium" },
-      properties = { titlebars_enabled = false } },
-     -- Mindmaster window buggerino
-     { rule = { class = "MindMaster" },
-       properties = { opacity = 1, maximized = false, floating = false } },
-		-- Gimp
-     { rule = { class = "Gimp", role = "gimp-image-window" },
-       properties = { maximized = true } },
-}
--- }}}
-
 -- {{{ Run ONCE
 awful.spawn.with_shell("~/.config/awesome/autorun.sh")
 -- }}}
 
+-- {{{ Hide systray
+awful.screen.connect_for_each_screen(function(s)
+    s.systray = wibox.widget.systray()
+    s.systray.visible = false
+end)
