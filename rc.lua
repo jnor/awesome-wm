@@ -98,13 +98,19 @@ end)
 -- Keyboard map indicator and switcher
 mykeyboardlayout = awful.widget.keyboardlayout()
 
---local mytextclock = wibox.widget.textclock()
 
--- Create a textclock widget
---mytextclock = wibox.widget.textclock()
+-- Vertical seperator
+local vert_sep = wibox.widget {
+    widget = wibox.widget.separator,
+    orientation = "vertical",
+    forced_width = 5,
+    color = "#353535",
+    visible = false,
+}
+
+-- Textclock widget
 mytextclock = wibox.widget {
-	--format = '  %H:%M',
-    format = '    [ %a %b %d, %H:%M ]    ',
+    format = '  %a %b %d, %H:%M  ',
 	widget = wibox.widget.textclock,
     visible = false
 }
@@ -182,24 +188,27 @@ screen.connect_signal("request::desktop_decoration", function(s)
         screen   = s,
         widget   = {
             layout = wibox.layout.align.horizontal,
-						expand = "none",
+				expand = "none",
             { -- Left widgets
                 layout = wibox.layout.fixed.horizontal,
                 nil,
-                --mylauncher,
+
             },
             { -- Middle widgets
                 layout = wibox.layout.fixed.horizontal,
                 s.mytaglist,
                 s.mypromptbox,
+                vert_sep,
                 mytextclock,
+                vert_sep,
                 wibox.widget.systray(),
             },
             { -- Right widgets
                 layout = wibox.layout.fixed.horizontal,
+                nil,
+                --mylauncher,
                 --mykeyboardlayout,
 				--mytextclock,
-                nil,
                 --s.mylayoutbox,
             },
         }
@@ -342,15 +351,21 @@ awful.keyboard.append_global_keybindings({
               {description = "restore minimized", group = "client"}),
 
 
+    -- Show / hide some stuff
     awful.key({ modkey }, "e", function() awful.screen.focused().systray.visible = not
             awful.screen.focused().systray.visible
     end,
         { description = "Show systray", group = "screen" }),
-
+    --
     awful.key({ modkey }, "e", function()
         mytextclock.visible = not mytextclock.visible
     end,
         { description = "Show clock" }),
+    --
+    awful.key({ modkey }, "e", function()
+        vert_sep.visible = not vert_sep.visible
+    end,
+        { description = "Show seperator" }),
 
 })
 
