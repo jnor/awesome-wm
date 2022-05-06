@@ -118,7 +118,7 @@ mytextclock = wibox.widget {
 local myclock_t = awful.tooltip {
     objects        = { mytextclock },
     timer_function = function()
-        return os.date('Today is %A %B %d %Y\nThe time is %T')
+        return os.date('Today is %A %B %d %Y\nThe time is %T\nYYYY-MM-DD is %Y-%m-%d')
     end,
 }
 
