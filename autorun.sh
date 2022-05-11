@@ -13,6 +13,7 @@ run redshift-gtk
 run nm-applet
 run nitrogen --restore --set-scaled
 run gnome-keyring-daemon --start
+#run cbatticon
 
 #run caprine #messenger
 

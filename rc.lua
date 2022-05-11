@@ -20,6 +20,9 @@ local hotkeys_popup = require("awful.hotkeys_popup")
 -- Enable hotkeys help widget for VIM and other apps
 -- when client with a matching name is opened:
 require("awful.hotkeys_popup.keys")
+-- Battery widget module
+local battery_widget = require 'battery_widget'
+
 
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
@@ -93,6 +96,21 @@ tag.connect_signal("request::default_layouts", function()
 end)
 -- }}}
 
+-- Create the battery widget:
+local my_battery_widget = battery_widget {
+    screen = screen,
+    use_display_device = true,
+    widget_template = wibox.widget.textbox,
+    instant_update = true,
+    visible = false
+}
+-- When UPower updates the battery status, the widget is notified
+-- and calls a signal you need to connect to:
+my_battery_widget:connect_signal('upower::update', function (widget, device)
+    widget.text = string.format('%3d', device.percentage) .. '%'
+end)
+
+
 -- {{{ Wibar
 
 -- Keyboard map indicator and switcher
@@ -103,7 +121,7 @@ mykeyboardlayout = awful.widget.keyboardlayout()
 local vert_sep = wibox.widget {
     widget = wibox.widget.separator,
     orientation = "vertical",
-    forced_width = 5,
+    forced_width = 1,
     color = "#353535",
     visible = false,
 }
@@ -198,9 +216,11 @@ screen.connect_signal("request::desktop_decoration", function(s)
                 layout = wibox.layout.fixed.horizontal,
                 s.mytaglist,
                 s.mypromptbox,
-                vert_sep,
+                wibox.container.margin(vert_sep, 0, 5),
+                my_battery_widget,
+                wibox.container.margin(vert_sep, 5, 0),
                 mytextclock,
-                vert_sep,
+                wibox.container.margin(vert_sep, 0, 5),
                 wibox.widget.systray(),
             },
             { -- Right widgets
@@ -366,6 +386,13 @@ awful.keyboard.append_global_keybindings({
         vert_sep.visible = not vert_sep.visible
     end,
         { description = "Show seperator" }),
+    --
+    awful.key({ modkey }, "e", function()
+        my_battery_widget.visible = not vert_sep.visible
+    end,
+        { description = "Show battery widget" }),
+
+        
 
 })
 
